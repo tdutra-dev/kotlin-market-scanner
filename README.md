@@ -12,13 +12,38 @@ flowchart LR
     C --> E[Publish to Kafka\nReactor Kafka producer]
     E --> F[(Kafka topic\nprice-ticks)]
     F --> G[Consumer / downstream processing]
-    G --> H[Reactive SSE endpoint\n/webapi/prices/stream]
+    G --> H[Reactive SSE endpoint\nGET /api/prices/stream]
     D --> I[Paginated query API\nGET /api/prices]
     H --> J[Output\nclient dashboards / stream consumers]
     I --> J
 ```
 
 This flow shows the full data path from inbound market events to user-visible output. Market input enters the system as live trade messages, is validated and mapped to a domain model (`PriceTick`), then goes through reactive processing for retry, windowed aggregation, and buffering. The system then stores the results, publishes them to Kafka for decoupled consumers, and exposes both a live SSE stream and a paginated query API for external consumers.
+
+## End-to-end data flow
+
+```text
+1. External market feed sends trade updates
+   ↓
+2. Binance WebSocket client receives raw payloads
+   ↓
+3. Payload is converted to PriceTick
+   ↓
+4. Reactive pipeline applies:
+   - retry when websocket drops
+   - filter invalid events
+   - aggregate ticks in windows
+   - persist to Postgres via R2DBC
+   - publish to Kafka topic
+   ↓
+5. Clients consume through:
+   - SSE stream: GET /api/prices/stream
+   - query endpoint: GET /api/prices?symbol=BTCUSDT&page=0&size=20
+   ↓
+6. Output reaches dashboards, alerts, or downstream services
+```
+
+This is the “big picture” of the system: data enters as a stream of real-world events, is normalized and enriched in Kotlin, passes through a resilient reactive pipeline, and exits through either a live stream or a persisted query API.
 
 ## Key technical decisions
 
