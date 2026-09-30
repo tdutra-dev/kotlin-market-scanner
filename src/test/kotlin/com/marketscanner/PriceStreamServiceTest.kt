@@ -6,11 +6,11 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 class PriceStreamServiceTest {
 
@@ -47,13 +47,11 @@ class PriceStreamServiceTest {
         val service = PriceStreamService(fakeClient, PriceTickPersistenceService(repository))
         service.priceKafkaProducer = producer
 
-        val aggregated = service.stream("BTCUSDT")
-            .take(1)
-            .collectList()
-            .block()
-
-        assertNotNull(aggregated)
-        assertEquals(1, aggregated.size)
-        assertEquals(BigDecimal("100.00"), aggregated.first().price.setScale(2))
+        StepVerifier.create(service.stream("BTCUSDT").take(1))
+            .assertNext { tick ->
+                assertEquals("BTCUSDT", tick.symbol)
+                assertEquals(BigDecimal("100.00"), tick.price.setScale(2))
+            }
+            .verifyComplete()
     }
 }
