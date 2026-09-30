@@ -38,12 +38,38 @@ This flow shows the full data path from inbound market events to user-visible ou
    ↓
 5. Clients consume through:
    - SSE stream: GET /api/prices/stream
+   - Kafka-backed stream: GET /api/prices/kafka-stream
    - query endpoint: GET /api/prices?symbol=BTCUSDT&page=0&size=20
    ↓
 6. Output reaches dashboards, alerts, or downstream services
 ```
 
-This is the “big picture” of the system: data enters as a stream of real-world events, is normalized and enriched in Kotlin, passes through a resilient reactive pipeline, and exits through either a live stream or a persisted query API.
+This is the “big picture” of the system: data enters as a stream of real-world events, is normalized and enriched in Kotlin, passes through a resilient reactive pipeline, and exits through either a live stream, a Kafka-driven stream, or a persisted query API.
+
+## API map
+
+```text
+GET /api/prices/stream?symbol=BTCUSDT
+  -> Server-Sent Events stream of live aggregated ticks
+
+GET /api/prices/kafka-stream
+  -> Kafka consumer stream replaying messages from the topic
+
+GET /api/prices?symbol=BTCUSDT&page=0&size=20
+  -> paginated persisted history for a symbol
+```
+
+Example response shape:
+
+```json
+{
+  "symbol": "BTCUSDT",
+  "price": "123.45",
+  "timestamp": "2026-09-30T15:00:00Z",
+  "source": "aggregated",
+  "volume": 42.0
+}
+```
 
 ## Key technical decisions
 
