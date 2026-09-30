@@ -6,17 +6,19 @@ A reactive market-data scanner built in Kotlin to explore event-driven architect
 
 ```mermaid
 flowchart LR
-    A[Binance WebSocket] --> B[PriceStreamService]
-    B --> C[Aggregation + Retry]
-    C --> D[(R2DBC / Postgres)]
-    C --> E[Reactor Kafka Producer]
-    E --> F[(Kafka Topic: price-ticks)]
-    F --> G[Kafka Consumer]
-    G --> H[Reactive SSE API]
-    H --> I[Clients / dashboards]
+    A[Market input\nBinance WebSocket / rest API] --> B[Normalize + validate\nPriceTick model]
+    B --> C[Reactive pipeline\nretry, filter, aggregate]
+    C --> D[Persist stream\nR2DBC + Postgres]
+    C --> E[Publish to Kafka\nReactor Kafka producer]
+    E --> F[(Kafka topic\nprice-ticks)]
+    F --> G[Consumer / downstream processing]
+    G --> H[Reactive SSE endpoint\n/webapi/prices/stream]
+    D --> I[Paginated query API\nGET /api/prices]
+    H --> J[Output\nclient dashboards / stream consumers]
+    I --> J
 ```
 
-At a high level, inbound trade events are ingested from a live market feed, normalized into `PriceTick`, aggregated into time windows, and then persisted or forwarded to Kafka. The API layer exposes both a direct SSE endpoint and a paginated query endpoint backed by reactive persistence.
+This flow shows the full data path from inbound market events to user-visible output. Market input enters the system as live trade messages, is validated and mapped to a domain model (`PriceTick`), then goes through reactive processing for retry, windowed aggregation, and buffering. The system then stores the results, publishes them to Kafka for decoupled consumers, and exposes both a live SSE stream and a paginated query API for external consumers.
 
 ## Key technical decisions
 
