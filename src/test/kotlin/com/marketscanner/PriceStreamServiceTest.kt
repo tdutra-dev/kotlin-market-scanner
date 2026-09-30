@@ -41,7 +41,11 @@ class PriceStreamServiceTest {
         val repository = mock<PriceTickRepository>()
         whenever(repository.save(any<PriceTickEntity>())).thenAnswer { Mono.just(it.arguments[0] as PriceTickEntity) }
 
+        val producer = mock<PriceKafkaProducer>()
+        whenever(producer.publish(any<PriceTick>())).thenReturn(Mono.empty())
+
         val service = PriceStreamService(fakeClient, PriceTickPersistenceService(repository))
+        service.priceKafkaProducer = producer
 
         val aggregated = service.stream("BTCUSDT")
             .take(1)

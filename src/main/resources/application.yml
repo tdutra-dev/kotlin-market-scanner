@@ -9,6 +9,12 @@ spring:
     init:
       mode: always
 
+kafka:
+  enabled: ${KAFKA_ENABLED:false}
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  topic: ${KAFKA_TOPIC:price-ticks}
+  consumer-group: ${KAFKA_CONSUMER_GROUP:market-scanner-group}
+
 logging:
   level:
     org.springframework.r2dbc: INFO

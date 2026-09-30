@@ -12,6 +12,15 @@ private data class BinancePriceResponse(
     val volume: String? = null,
 )
 
+@Serializable
+data class PriceTickPayload(
+    val symbol: String,
+    val price: String,
+    val timestamp: String,
+    val source: String? = null,
+    val volume: Double? = null,
+)
+
 /**
  * Represents a single trade/price observation. The price is non-null because every tick must have a numeric value
  * to compute averages or compare prices; the optional fields are nullable because some APIs omit them.
@@ -45,5 +54,21 @@ data class PriceTick(
                 volume = response.volume?.toDouble(),
             )
         }
+
+        fun fromPayload(payload: PriceTickPayload): PriceTick = PriceTick(
+            symbol = payload.symbol,
+            price = payload.price.toBigDecimal(),
+            timestamp = Instant.parse(payload.timestamp),
+            source = payload.source,
+            volume = payload.volume,
+        )
     }
+
+    fun toPayload(): PriceTickPayload = PriceTickPayload(
+        symbol = symbol,
+        price = price.toPlainString(),
+        timestamp = timestamp.toString(),
+        source = source,
+        volume = volume,
+    )
 }

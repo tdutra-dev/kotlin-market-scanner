@@ -1,8 +1,10 @@
 package com.marketscanner
 
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import reactor.util.retry.Retry
 import java.math.BigDecimal
 import java.time.Duration
@@ -13,6 +15,8 @@ class PriceStreamService(
     private val binanceWebSocketClient: BinanceWebSocketClient,
     private val priceTickPersistenceService: PriceTickPersistenceService,
 ) {
+    @Autowired(required = false)
+    var priceKafkaProducer: PriceKafkaProducer? = null
     private val logger = LoggerFactory.getLogger(PriceStreamService::class.java)
 
     /**
@@ -39,7 +43,18 @@ class PriceStreamService(
             .bufferTimeout(5, Duration.ofSeconds(5))
             .filter { it.isNotEmpty() }
             .map { aggregateWindow(it, symbol) }
-            .flatMap { priceTickPersistenceService.save(it) }
+            .flatMap { aggregatedTick ->
+                priceTickPersistenceService.save(aggregatedTick)
+                    .flatMap { persistedTick ->
+                        val producer = priceKafkaProducer
+                        if (producer == null) {
+                            Mono.just(persistedTick)
+                        } else {
+                            producer.publish(persistedTick)
+                                .thenReturn(persistedTick)
+                        }
+                    }
+            }
     }
 
     private fun aggregateWindow(ticks: List<PriceTick>, symbol: String): PriceTick {
