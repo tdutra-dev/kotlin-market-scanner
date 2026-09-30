@@ -11,6 +11,7 @@ import java.time.Instant
 @Service
 class PriceStreamService(
     private val binanceWebSocketClient: BinanceWebSocketClient,
+    private val priceTickPersistenceService: PriceTickPersistenceService,
 ) {
     private val logger = LoggerFactory.getLogger(PriceStreamService::class.java)
 
@@ -38,6 +39,7 @@ class PriceStreamService(
             .bufferTimeout(5, Duration.ofSeconds(5))
             .filter { it.isNotEmpty() }
             .map { aggregateWindow(it, symbol) }
+            .flatMap { priceTickPersistenceService.save(it) }
     }
 
     private fun aggregateWindow(ticks: List<PriceTick>, symbol: String): PriceTick {

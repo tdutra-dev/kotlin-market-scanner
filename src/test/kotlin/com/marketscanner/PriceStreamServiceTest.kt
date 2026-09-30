@@ -1,7 +1,11 @@
 package com.marketscanner
 
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
@@ -34,7 +38,10 @@ class PriceStreamServiceTest {
             }
         }
 
-        val service = PriceStreamService(fakeClient)
+        val repository = mock<PriceTickRepository>()
+        whenever(repository.save(any<PriceTickEntity>())).thenAnswer { Mono.just(it.arguments[0] as PriceTickEntity) }
+
+        val service = PriceStreamService(fakeClient, PriceTickPersistenceService(repository))
 
         val aggregated = service.stream("BTCUSDT")
             .take(1)
